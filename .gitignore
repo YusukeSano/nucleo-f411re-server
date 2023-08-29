@@ -1,0 +1,5 @@
+.DS_Store
+app/target/
+**/*.orig
+**/*.rs.bk
+Cargo.lock

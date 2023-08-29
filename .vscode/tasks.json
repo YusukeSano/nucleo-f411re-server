@@ -1,0 +1,63 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "type": "process",
+      "command": "docker",
+      "args": [
+        "compose",
+        "run",
+        "--rm",
+        "app",
+        "bash",
+        "build.sh",
+        "${workspaceRoot}"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Write to device",
+      "type": "process",
+      "command": "openocd",
+      "args": [
+        "-f",
+        "app/openocd.cfg",
+        "-c",
+        "program app/target/thumbv7em-none-eabihf/debug/nucleo-f411re verify reset exit"
+      ],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Debug: OpenOCD",
+      "type": "process",
+      "command": "openocd",
+      "args": ["-f", "app/openocd.cfg"],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Debug: GDB",
+      "type": "process",
+      "command": "arm-none-eabi-gdb",
+      "args": [
+        "-q",
+        "-x",
+        "app/openocd.gdb",
+        "app/target/thumbv7em-none-eabihf/debug/nucleo-f411re"
+      ],
+      "group": "none",
+      "problemMatcher": []
+    }
+  ]
+}
