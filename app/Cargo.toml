@@ -4,14 +4,15 @@ name = "nucleo-f411re"
 version = "0.1.0"
 authors = ["YusukeSano"]
 
+[workspace]
+members = ["enc28j60"]
+
 [dependencies]
 embedded-hal = "0.2"
+stm32f4xx-hal = { version = "0.17.1", features = ["stm32f411"] }
 nb = "1"
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 cortex-m-semihosting = "0.5"
 panic-halt = "0.2"
-
-[dependencies.stm32f4xx-hal]
-version = "0.17.1"
-features = ["stm32f411"]
+enc28j60 = { path = "enc28j60" }
