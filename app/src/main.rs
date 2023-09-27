@@ -6,15 +6,13 @@
 use panic_halt as _;
 
 use cortex_m_rt::entry;
-use stm32f4xx_hal::{
-    spi::Spi,
-    pac::Peripherals,
-    prelude::*,
-};
 use enc28j60::Enc28j60;
+use pdu::*;
+use stm32f4xx_hal::{pac::Peripherals, prelude::*, spi::Spi};
 
 /* Configuration */
 const MAC: [u8; 6] = [0x02, 0x00, 0x00, 0x00, 0x00, 0x00];
+const IP: [u8; 4] = [192, 168, 0, 1];
 
 /* Constants */
 const KB: u16 = 1024; // bytes
@@ -57,12 +55,13 @@ fn main() -> ! {
         &mut delay,
         7 * KB,
         MAC,
-    ).ok().unwrap();
+    )
+    .unwrap();
 
-    let mut buf = [0; 256];
     loop {
-        let len = enc28j60.receive(&mut buf).ok().unwrap();
-        
+        let mut buffer = [0u8; 1522];
+        let len = enc28j60.receive(&mut buffer).unwrap();
+
         if len != 0 {
             led.toggle();
         }

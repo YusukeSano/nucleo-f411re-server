@@ -5,7 +5,10 @@ version = "0.1.0"
 authors = ["YusukeSano"]
 
 [workspace]
-members = ["enc28j60"]
+members = [
+    "enc28j60",
+    "pdu",
+]
 
 [dependencies]
 embedded-hal = "0.2"
@@ -16,3 +19,4 @@ cortex-m-rt = "0.7"
 cortex-m-semihosting = "0.5"
 panic-halt = "0.2"
 enc28j60 = { path = "enc28j60" }
+pdu = { path = "pdu" }
