@@ -9,6 +9,9 @@ pub use arp::{ArpOpcode, ArpPdu, ArpParser};
 mod ip;
 pub use ip::{Ip, IpProto, IpPseudoHeader, Ipv4, Ipv4Option, Ipv4PseudoHeader, Ipv4Pdu, Ipv4Parser};
 
+mod udp;
+pub use udp::{Udp, UdpPdu, UdpParser};
+
 mod icmp;
 pub use icmp::{Icmp, IcmpType, IcmpPdu, IcmpParser};
 

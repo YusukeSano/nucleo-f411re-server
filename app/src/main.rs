@@ -111,6 +111,36 @@ fn main() -> ! {
                             enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
                         }
                     }
+                    Ok(Ipv4::Udp(udp_rcvd)) => {
+                        let mut udp_pdu = UdpPdu::new();
+                        udp_pdu.source_port(udp_rcvd.destination_port());
+                        udp_pdu.destination_port(udp_rcvd.source_port());
+                        match udp_rcvd.inner() {
+                            Ok(Udp::Raw(raw_rcvd)) => {
+                                udp_pdu.inner(raw_rcvd).unwrap();
+                            }
+                            _ => {}
+                        }
+                        udp_pdu.compute_checksum(&IpPseudoHeader::Ipv4(Ipv4PseudoHeader {
+                            source_address: ipv4_rcvd.destination_address(),
+                            destination_address: ipv4_rcvd.source_address(),
+                            protocol: IpProto::UDP,
+                        }));
+
+                        let mut ipv4_pdu = Ipv4Pdu::new();
+                        ipv4_pdu.protocol(IpProto::UDP);
+                        ipv4_pdu.source_address(ipv4_rcvd.destination_address());
+                        ipv4_pdu.destination_address(ipv4_rcvd.source_address());
+                        ipv4_pdu.inner(udp_pdu.as_bytes()).unwrap();
+                        ipv4_pdu.compute_checksum();
+
+                        let mut ethernet_pdu = EthernetPdu::new(EtherType::IPV4);
+                        ethernet_pdu.destination_address(ethernet_rcvd.source_address());
+                        ethernet_pdu.source_address(ethernet_rcvd.destination_address());
+                        ethernet_pdu.inner(ipv4_pdu.as_bytes()).unwrap();
+
+                        enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
+                    }
                     _ => {}
                 },
                 _ => {}
