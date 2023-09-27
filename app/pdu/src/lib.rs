@@ -6,8 +6,11 @@ pub use ethernet::{Ethernet, EtherType, EthernetPdu, EthernetParser};
 mod arp;
 pub use arp::{ArpOpcode, ArpPdu, ArpParser};
 
+mod ip;
+pub use ip::{Ip, IpPseudoHeader, Ipv4, Ipv4Option, Ipv4PseudoHeader, Ipv4Pdu, Ipv4Parser};
+
 mod util;
-pub use util::{crc32};
+pub use util::{checksum, crc32};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Error {

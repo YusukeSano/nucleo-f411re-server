@@ -5,6 +5,7 @@ use crate::{util, Error, Result};
 #[allow(non_snake_case)]
 pub mod EtherType {
     pub const ARP: u16 = 0x0806;
+    pub const IPV4: u16 = 0x0800;
     pub const DOT1Q: u16 = 0x8100;
 }
 
@@ -12,6 +13,7 @@ pub mod EtherType {
 pub enum Ethernet<'a> {
     Raw(&'a [u8]),
     Arp(super::ArpParser<'a>),
+    Ipv4(super::Ipv4Parser<'a>),
 }
 
 pub struct EthernetPdu {
@@ -151,6 +153,7 @@ impl<'a> EthernetParser<'a> {
         let rest = &self.buffer[self.computed_ihl()..];
         Ok(match self.ethertype() {
             EtherType::ARP => Ethernet::Arp(super::ArpParser::parse(rest)?),
+            EtherType::IPV4 => Ethernet::Ipv4(super::Ipv4Parser::parse(rest)?),
             _ => Ethernet::Raw(rest),
         })
     }
