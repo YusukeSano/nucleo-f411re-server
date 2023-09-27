@@ -4,12 +4,14 @@ use crate::{util, Error, Result};
 
 #[allow(non_snake_case)]
 pub mod EtherType {
+    pub const ARP: u16 = 0x0806;
     pub const DOT1Q: u16 = 0x8100;
 }
 
 #[derive(Copy, Clone)]
 pub enum Ethernet<'a> {
     Raw(&'a [u8]),
+    Arp(super::ArpParser<'a>),
 }
 
 pub struct EthernetPdu {
@@ -148,6 +150,7 @@ impl<'a> EthernetParser<'a> {
     pub fn into_inner(self) -> Result<Ethernet<'a>> {
         let rest = &self.buffer[self.computed_ihl()..];
         Ok(match self.ethertype() {
+            EtherType::ARP => Ethernet::Arp(super::ArpParser::parse(rest)?),
             _ => Ethernet::Raw(rest),
         })
     }

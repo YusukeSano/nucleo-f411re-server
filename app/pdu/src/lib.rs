@@ -3,6 +3,9 @@
 mod ethernet;
 pub use ethernet::{Ethernet, EtherType, EthernetPdu, EthernetParser};
 
+mod arp;
+pub use arp::{ArpOpcode, ArpPdu, ArpParser};
+
 mod util;
 pub use util::{crc32};
 

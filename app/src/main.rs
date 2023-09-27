@@ -62,8 +62,30 @@ fn main() -> ! {
         let mut buffer = [0u8; 1522];
         let len = enc28j60.receive(&mut buffer).unwrap();
 
-        if len != 0 {
-            led.toggle();
+        match EthernetParser::parse(&buffer[..len as usize]) {
+            Ok(ethernet_rcvd) => match ethernet_rcvd.inner() {
+                Ok(Ethernet::Arp(arp_rcvd)) => {
+                    if arp_rcvd.opcode() == ArpOpcode::REQUEST
+                        && arp_rcvd.target_protocol_address() == IP
+                    {
+                        let mut arp_pdu = ArpPdu::new();
+                        arp_pdu.opcode(ArpOpcode::REPLY);
+                        arp_pdu.sender_hardware_address(MAC);
+                        arp_pdu.sender_protocol_address(IP);
+                        arp_pdu.target_hardware_address(arp_rcvd.sender_hardware_address());
+                        arp_pdu.target_protocol_address(arp_rcvd.sender_protocol_address());
+
+                        let mut ethernet_pdu = EthernetPdu::new(EtherType::ARP);
+                        ethernet_pdu.destination_address(ethernet_rcvd.source_address());
+                        ethernet_pdu.source_address(MAC);
+                        ethernet_pdu.inner(arp_pdu.as_bytes()).unwrap();
+
+                        enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
         }
     }
 }
