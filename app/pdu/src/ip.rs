@@ -5,6 +5,7 @@ use crate::{util, Error, Result};
 #[allow(non_snake_case)]
 pub mod IpProto {
     pub const ICMP: u8 = 1;
+    pub const TCP: u8 = 6;
     pub const UDP: u8 = 17;
 }
 
@@ -29,6 +30,7 @@ impl<'a> Ip<'a> {
 pub enum Ipv4<'a> {
     Raw(&'a [u8]),
     Icmp(super::IcmpParser<'a>),
+    Tcp(super::TcpParser<'a>),
     Udp(super::UdpParser<'a>),
 }
 
@@ -195,6 +197,7 @@ impl<'a> Ipv4Parser<'a> {
         } else {
             Ok(match self.protocol() {
                 IpProto::ICMP => Ipv4::Icmp(super::IcmpParser::parse(rest)?),
+                IpProto::TCP => Ipv4::Tcp(super::TcpParser::parse(rest)?),
                 IpProto::UDP => Ipv4::Udp(super::UdpParser::parse(rest)?),
                 _ => Ipv4::Raw(rest),
             })

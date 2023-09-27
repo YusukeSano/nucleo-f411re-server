@@ -56,3 +56,20 @@ pub fn crc32(data: &[u8]) -> u32 {
     }
     !crc
 }
+
+pub struct Xorshift32 {
+    state: u32,
+}
+
+impl Xorshift32 {
+    pub fn new(seed: u32) -> Xorshift32 {
+        Xorshift32 { state: seed }
+    }
+
+    pub fn gen(&mut self) -> u32 {
+        self.state ^= self.state << 13;
+        self.state ^= self.state >> 17;
+        self.state ^= self.state << 5;
+        self.state
+    }
+}

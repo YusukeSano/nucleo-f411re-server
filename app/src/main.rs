@@ -58,8 +58,17 @@ fn main() -> ! {
     )
     .unwrap();
 
+    // Random Number Generator
+    let mut rng = Xorshift32::new(0xFF);
+
+    // TCP
+    let mut tcp_state: TcpState = TcpState::Closed;
+
     loop {
         let mut buffer = [0u8; 1522];
+        if tcp_state == TcpState::Closed {
+            tcp_state = TcpState::Listen;
+        }
         let len = enc28j60.receive(&mut buffer).unwrap();
 
         match EthernetParser::parse(&buffer[..len as usize]) {
@@ -141,6 +150,121 @@ fn main() -> ! {
 
                         enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
                     }
+                    Ok(Ipv4::Tcp(tcp_rcvd)) => match tcp_state {
+                        TcpState::Listen => match tcp_rcvd.flags() {
+                            TcpFlag::SYN => {
+                                let mut tcp_pdu = TcpPdu::new();
+                                tcp_pdu.source_port(tcp_rcvd.destination_port());
+                                tcp_pdu.destination_port(tcp_rcvd.source_port());
+                                tcp_pdu.sequence_number(rng.gen());
+                                tcp_pdu.acknowledgement_number(tcp_rcvd.sequence_number() + 1);
+                                tcp_pdu.syn(true);
+                                tcp_pdu.ack(true);
+                                tcp_pdu.compute_checksum(&IpPseudoHeader::Ipv4(Ipv4PseudoHeader {
+                                    source_address: ipv4_rcvd.destination_address(),
+                                    destination_address: ipv4_rcvd.source_address(),
+                                    protocol: IpProto::TCP,
+                                }));
+
+                                let mut ipv4_pdu = Ipv4Pdu::new();
+                                ipv4_pdu.protocol(IpProto::TCP);
+                                ipv4_pdu.source_address(ipv4_rcvd.destination_address());
+                                ipv4_pdu.destination_address(ipv4_rcvd.source_address());
+                                ipv4_pdu.inner(tcp_pdu.as_bytes()).unwrap();
+                                ipv4_pdu.compute_checksum();
+
+                                let mut ethernet_pdu = EthernetPdu::new(EtherType::IPV4);
+                                ethernet_pdu.destination_address(ethernet_rcvd.source_address());
+                                ethernet_pdu.source_address(ethernet_rcvd.destination_address());
+                                ethernet_pdu.inner(ipv4_pdu.as_bytes()).unwrap();
+
+                                enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
+                                tcp_state = TcpState::SynReceived;
+                            }
+                            _ => {}
+                        },
+                        TcpState::SynReceived => match tcp_rcvd.flags() {
+                            TcpFlag::ACK => {
+                                tcp_state = TcpState::Established;
+                                led.set_high();
+                            }
+                            _ => {}
+                        },
+                        TcpState::Established => match tcp_rcvd.flags() {
+                            flag if flag == TcpFlag::PSH + TcpFlag::ACK => {
+                                let mut tcp_pdu = TcpPdu::new();
+                                tcp_pdu.source_port(tcp_rcvd.destination_port());
+                                tcp_pdu.destination_port(tcp_rcvd.source_port());
+                                tcp_pdu.sequence_number(tcp_rcvd.acknowledgement_number());
+                                let data_length = ipv4_rcvd.total_length()
+                                    - ipv4_rcvd.computed_ihl() as u16
+                                    - tcp_rcvd.computed_data_offset() as u16;
+                                tcp_pdu.acknowledgement_number(
+                                    tcp_rcvd.sequence_number() + u32::from(data_length),
+                                );
+                                tcp_pdu.ack(true);
+                                tcp_pdu.compute_checksum(&IpPseudoHeader::Ipv4(Ipv4PseudoHeader {
+                                    source_address: ipv4_rcvd.destination_address(),
+                                    destination_address: ipv4_rcvd.source_address(),
+                                    protocol: IpProto::TCP,
+                                }));
+
+                                let mut ipv4_pdu = Ipv4Pdu::new();
+                                ipv4_pdu.protocol(IpProto::TCP);
+                                ipv4_pdu.source_address(ipv4_rcvd.destination_address());
+                                ipv4_pdu.destination_address(ipv4_rcvd.source_address());
+                                ipv4_pdu.inner(tcp_pdu.as_bytes()).unwrap();
+                                ipv4_pdu.compute_checksum();
+
+                                let mut ethernet_pdu = EthernetPdu::new(EtherType::IPV4);
+                                ethernet_pdu.destination_address(ethernet_rcvd.source_address());
+                                ethernet_pdu.source_address(ethernet_rcvd.destination_address());
+                                ethernet_pdu.inner(ipv4_pdu.as_bytes()).unwrap();
+
+                                enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
+                            }
+                            flag if flag == TcpFlag::FIN + TcpFlag::ACK => {
+                                tcp_state = TcpState::CloseWait;
+
+                                let mut tcp_pdu = TcpPdu::new();
+                                tcp_pdu.source_port(tcp_rcvd.destination_port());
+                                tcp_pdu.destination_port(tcp_rcvd.source_port());
+                                tcp_pdu.sequence_number(tcp_rcvd.acknowledgement_number());
+                                tcp_pdu.acknowledgement_number(tcp_rcvd.sequence_number() + 1);
+                                tcp_pdu.fin(true);
+                                tcp_pdu.ack(true);
+                                tcp_pdu.compute_checksum(&IpPseudoHeader::Ipv4(Ipv4PseudoHeader {
+                                    source_address: ipv4_rcvd.destination_address(),
+                                    destination_address: ipv4_rcvd.source_address(),
+                                    protocol: IpProto::TCP,
+                                }));
+
+                                let mut ipv4_pdu = Ipv4Pdu::new();
+                                ipv4_pdu.protocol(IpProto::TCP);
+                                ipv4_pdu.source_address(ipv4_rcvd.destination_address());
+                                ipv4_pdu.destination_address(ipv4_rcvd.source_address());
+                                ipv4_pdu.inner(tcp_pdu.as_bytes()).unwrap();
+                                ipv4_pdu.compute_checksum();
+
+                                let mut ethernet_pdu = EthernetPdu::new(EtherType::IPV4);
+                                ethernet_pdu.destination_address(ethernet_rcvd.source_address());
+                                ethernet_pdu.source_address(ethernet_rcvd.destination_address());
+                                ethernet_pdu.inner(ipv4_pdu.as_bytes()).unwrap();
+
+                                enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
+                                tcp_state = TcpState::LastAck;
+                            }
+                            _ => {}
+                        },
+                        TcpState::LastAck => match tcp_rcvd.flags() {
+                            TcpFlag::ACK => {
+                                tcp_state = TcpState::Closed;
+                                led.set_low();
+                            }
+                            _ => {}
+                        },
+                        _ => {}
+                    },
                     _ => {}
                 },
                 _ => {}
