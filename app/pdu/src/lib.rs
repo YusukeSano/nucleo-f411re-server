@@ -7,7 +7,10 @@ mod arp;
 pub use arp::{ArpOpcode, ArpPdu, ArpParser};
 
 mod ip;
-pub use ip::{Ip, IpPseudoHeader, Ipv4, Ipv4Option, Ipv4PseudoHeader, Ipv4Pdu, Ipv4Parser};
+pub use ip::{Ip, IpProto, IpPseudoHeader, Ipv4, Ipv4Option, Ipv4PseudoHeader, Ipv4Pdu, Ipv4Parser};
+
+mod icmp;
+pub use icmp::{Icmp, IcmpType, IcmpPdu, IcmpParser};
 
 mod util;
 pub use util::{checksum, crc32};

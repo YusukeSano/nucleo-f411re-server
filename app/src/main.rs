@@ -83,6 +83,36 @@ fn main() -> ! {
                         enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
                     }
                 }
+                Ok(Ethernet::Ipv4(ipv4_rcvd)) => match ipv4_rcvd.inner() {
+                    Ok(Ipv4::Icmp(icmp_rcvd)) => {
+                        if icmp_rcvd.message_type() == IcmpType::ECHO_REQUEST {
+                            let mut icmp_pdu = IcmpPdu::new();
+                            icmp_pdu.message_type(IcmpType::ECHO_REPLY);
+                            match icmp_rcvd.inner() {
+                                Ok(Icmp::Raw(raw_rcvd)) => {
+                                    icmp_pdu.inner(raw_rcvd).unwrap();
+                                }
+                                _ => {}
+                            }
+                            icmp_pdu.compute_checksum();
+
+                            let mut ipv4_pdu = Ipv4Pdu::new();
+                            ipv4_pdu.protocol(IpProto::ICMP);
+                            ipv4_pdu.source_address(ipv4_rcvd.destination_address());
+                            ipv4_pdu.destination_address(ipv4_rcvd.source_address());
+                            ipv4_pdu.inner(icmp_pdu.as_bytes()).unwrap();
+                            ipv4_pdu.compute_checksum();
+
+                            let mut ethernet_pdu = EthernetPdu::new(EtherType::IPV4);
+                            ethernet_pdu.destination_address(ethernet_rcvd.source_address());
+                            ethernet_pdu.source_address(ethernet_rcvd.destination_address());
+                            ethernet_pdu.inner(ipv4_pdu.as_bytes()).unwrap();
+
+                            enc28j60.transmit(ethernet_pdu.as_bytes()).unwrap();
+                        }
+                    }
+                    _ => {}
+                },
                 _ => {}
             },
             _ => {}

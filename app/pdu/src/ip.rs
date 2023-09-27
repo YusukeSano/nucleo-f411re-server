@@ -2,6 +2,11 @@ use core::convert::TryInto;
 
 use crate::{util, Error, Result};
 
+#[allow(non_snake_case)]
+pub mod IpProto {
+    pub const ICMP: u8 = 1;
+}
+
 #[derive(Copy, Clone)]
 pub enum Ip<'a> {
     Ipv4(Ipv4Parser<'a>),
@@ -22,6 +27,7 @@ impl<'a> Ip<'a> {
 #[derive(Copy, Clone)]
 pub enum Ipv4<'a> {
     Raw(&'a [u8]),
+    Icmp(super::IcmpParser<'a>),
 }
 
 pub struct Ipv4Pdu {
@@ -186,6 +192,7 @@ impl<'a> Ipv4Parser<'a> {
             Ok(Ipv4::Raw(rest))
         } else {
             Ok(match self.protocol() {
+                IpProto::ICMP => Ipv4::Icmp(super::IcmpParser::parse(rest)?),
                 _ => Ipv4::Raw(rest),
             })
         }
