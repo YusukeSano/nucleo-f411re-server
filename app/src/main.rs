@@ -203,6 +203,38 @@ fn main() -> ! {
                                     tcp_rcvd.sequence_number() + u32::from(data_length),
                                 );
                                 tcp_pdu.ack(true);
+                                match tcp_rcvd.inner() {
+                                    Ok(Tcp::Raw(raw_rcvd)) => match HttpParser::parse(raw_rcvd) {
+                                        Ok(http_rcvd) => {
+                                            if let Some(method) = http_rcvd.method() {
+                                                if method == "GET" {
+                                                    let mut http_pdu = HttpPdu::new();
+                                                    http_pdu
+                                                        .inner(
+                                                            "<!DOCTYPE html>\r\n\
+                                                            <html>\r\n\
+                                                            <head>\r\n\
+                                                            <title>HelloWorld!</title>\r\n\
+                                                            <meta charset=\"utf-8\" />\r\n\
+                                                            <link rel=\"icon\" href=\"data:,\">\r\n\
+                                                            </head>\r\n\
+                                                            <body>\r\n\
+                                                            <h1>HelloWorld!</h1>\r\n\
+                                                            </body>\r\n\
+                                                            </html>"
+                                                                .as_bytes(),
+                                                        )
+                                                        .unwrap();
+
+                                                    tcp_pdu.psh(true);
+                                                    tcp_pdu.inner(http_pdu.as_bytes()).unwrap();
+                                                }
+                                            }
+                                        }
+                                        _ => {}
+                                    },
+                                    _ => {}
+                                }
                                 tcp_pdu.compute_checksum(&IpPseudoHeader::Ipv4(Ipv4PseudoHeader {
                                     source_address: ipv4_rcvd.destination_address(),
                                     destination_address: ipv4_rcvd.source_address(),

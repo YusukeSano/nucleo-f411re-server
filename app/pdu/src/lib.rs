@@ -18,6 +18,9 @@ pub use udp::{Udp, UdpPdu, UdpParser};
 mod icmp;
 pub use icmp::{Icmp, IcmpType, IcmpPdu, IcmpParser};
 
+mod http;
+pub use http::{Http, HttpPdu, HttpParser};
+
 mod util;
 pub use util::{checksum, crc32, Xorshift32};
 

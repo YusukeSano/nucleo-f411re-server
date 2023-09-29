@@ -73,3 +73,23 @@ impl Xorshift32 {
         self.state
     }
 }
+
+pub fn get_digit_from_usize(val: usize) -> u8 {
+    let mut num = val;
+    let mut digit = 0;
+    while num != 0 {
+        num /= 10;
+        digit += 1;
+    }
+    digit
+}
+
+pub fn usize_to_bytes(val: usize) -> [u8; 4] {
+    let mut ans = [0u8; 4];
+    for i in (0..4).rev() {
+        let digit_num = (val as u32) % 10u32.pow(i + 1) / 10u32.pow(i);
+        let chr = core::char::from_digit(digit_num, 10).unwrap();
+        ans[3 - i as usize] = chr as u8;
+    }
+    ans
+}
